@@ -1,0 +1,82 @@
+# ============================================================
+# SmartPay Wallet — Prometheus Configuration
+# ============================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: "api-gateway"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["api-gateway:8080"]
+        labels:
+          service: "api-gateway"
+
+  - job_name: "auth-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["auth-service:8081"]
+        labels:
+          service: "auth-service"
+
+  - job_name: "user-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["user-service:8082"]
+        labels:
+          service: "user-service"
+
+  - job_name: "wallet-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["wallet-service:8083"]
+        labels:
+          service: "wallet-service"
+
+  - job_name: "transaction-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["transaction-service:8084"]
+        labels:
+          service: "transaction-service"
+
+  - job_name: "payment-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["payment-service:8085"]
+        labels:
+          service: "payment-service"
+
+  - job_name: "beneficiary-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["beneficiary-service:8086"]
+        labels:
+          service: "beneficiary-service"
+
+  - job_name: "notification-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["notification-service:8087"]
+        labels:
+          service: "notification-service"
+
+  - job_name: "audit-service"
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["audit-service:8088"]
+        labels:
+          service: "audit-service"
+
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: "node-exporter"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
