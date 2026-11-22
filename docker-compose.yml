@@ -31,8 +31,9 @@ services:
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
-      --max-connections=150
-      --innodb-buffer-pool-size=256M
+      --max-connections=100
+      --innodb-buffer-pool-size=128M
+      --performance_schema=OFF
 
   redis:
     image: redis:7-alpine
@@ -82,7 +83,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_LOG_DIRS: /var/kafka/kafka-logs
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
-      KAFKA_JVM_PERFORMANCE_OPTS: "-Xmx384m -Xms192m"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-Xmx256m -Xms128m"
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 >/dev/null 2>&1"]
       interval: 15s
@@ -245,7 +246,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${GATEWAY_PORT:-8080}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATA_REDIS_HOST: ${REDIS_HOST:-redis}
       SPRING_DATA_REDIS_PORT: ${REDIS_PORT:-6379}
@@ -274,7 +275,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${AUTH_SERVICE_PORT:-8081}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${AUTH_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${AUTH_DB_USER}
@@ -313,7 +314,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${USER_SERVICE_PORT:-8082}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${USER_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${USER_DB_USER}
@@ -349,7 +350,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${WALLET_SERVICE_PORT:-8083}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${WALLET_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${WALLET_DB_USER}
@@ -385,7 +386,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${TRANSACTION_SERVICE_PORT:-8084}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${TRANSACTION_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${TRANSACTION_DB_USER}
@@ -421,7 +422,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${PAYMENT_SERVICE_PORT:-8085}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${PAYMENT_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${PAYMENT_DB_USER}
@@ -457,7 +458,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${BENEFICIARY_SERVICE_PORT:-8086}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${BENEFICIARY_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${BENEFICIARY_DB_USER}
@@ -493,7 +494,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${NOTIFICATION_SERVICE_PORT:-8087}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${NOTIFICATION_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${NOTIFICATION_DB_USER}
@@ -535,7 +536,7 @@ services:
     env_file: .env
     environment:
       SERVER_PORT: ${AUDIT_SERVICE_PORT:-8088}
-      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseSerialGC"
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k"
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST:-mysql}:${MYSQL_PORT:-3306}/${AUDIT_DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${AUDIT_DB_USER}
