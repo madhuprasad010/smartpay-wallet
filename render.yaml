@@ -1,0 +1,181 @@
+# ============================================================
+# SmartPay Wallet — Render Blueprint Specification
+# Infrastructure-as-Code for 1-Click Deployment on Render
+# ============================================================
+
+version: "1"
+
+services:
+  # -----------------------------------------------------------
+  # 1. FRONTEND: High-Performance React 19 Static Site (CDN)
+  # -----------------------------------------------------------
+  - type: web
+    name: smartpay-web
+    runtime: static
+    buildCommand: cd frontend/smartpay-web && npm ci && npm run build
+    staticPublishPath: frontend/smartpay-web/dist
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://smartpay-api-gateway.onrender.com/api/v1
+
+  # -----------------------------------------------------------
+  # 2. PUBLIC API GATEWAY (Spring Cloud Gateway)
+  # -----------------------------------------------------------
+  - type: web
+    name: smartpay-api-gateway
+    runtime: docker
+    dockerfilePath: backend/api-gateway/Dockerfile
+    dockerContext: backend
+    plan: starter
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8080"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: smartpay-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: smartpay-redis
+          property: port
+
+  # -----------------------------------------------------------
+  # 3. PRIVATE MICROSERVICES (Internal Mesh Communication)
+  # -----------------------------------------------------------
+  - type: pserv
+    name: smartpay-auth-service
+    runtime: docker
+    dockerfilePath: backend/auth-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8081"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: smartpay-api-gateway
+          envVarKey: JWT_SECRET
+
+  - type: pserv
+    name: smartpay-user-service
+    runtime: docker
+    dockerfilePath: backend/user-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8082"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+
+  - type: pserv
+    name: smartpay-wallet-service
+    runtime: docker
+    dockerfilePath: backend/wallet-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8083"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+
+  - type: pserv
+    name: smartpay-transaction-service
+    runtime: docker
+    dockerfilePath: backend/transaction-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8084"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+
+  - type: pserv
+    name: smartpay-payment-service
+    runtime: docker
+    dockerfilePath: backend/payment-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8085"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+
+  - type: pserv
+    name: smartpay-beneficiary-service
+    runtime: docker
+    dockerfilePath: backend/beneficiary-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8086"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+
+  - type: pserv
+    name: smartpay-notification-service
+    runtime: docker
+    dockerfilePath: backend/notification-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8087"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+
+  - type: pserv
+    name: smartpay-audit-service
+    runtime: docker
+    dockerfilePath: backend/audit-service/Dockerfile
+    dockerContext: backend
+    envVars:
+      - key: SERVER_PORT
+        value: "8088"
+      - key: SPRING_PROFILES_ACTIVE
+        value: "docker"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+
+  # -----------------------------------------------------------
+  # 4. MANAGED CACHE
+  # -----------------------------------------------------------
+  - type: redis
+    name: smartpay-redis
+    ipAllowList: [] # Private network only
+    plan: starter
