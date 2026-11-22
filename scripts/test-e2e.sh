@@ -68,9 +68,21 @@ BOB_REG=$(curl -s -X POST "$GATEWAY/auth/register" \
 echo "Bob Registration Response: $BOB_REG"
 BOB_TOKEN=$(echo "$BOB_REG" | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 BOB_USER_ID=$(echo "$BOB_REG" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+
+if [ -z "$BOB_TOKEN" ]; then
+  echo "User Bob Chen already exists, authenticating via login..."
+  BOB_LOGIN=$(curl -s -X POST "$GATEWAY/auth/login" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "email": "bob.chen@smartpay.internal",
+      "password": "Password123!"
+    }')
+  BOB_TOKEN=$(echo "$BOB_LOGIN" | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+  BOB_USER_ID=$(echo "$BOB_LOGIN" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+fi
 echo "Bob User ID: $BOB_USER_ID"
 
-echo -e "\n7. Creating Bob's USD Wallet..."
+echo -e "\n7. Creating or Fetching Bob's USD Wallet..."
 BOB_WALLET_RES=$(curl -s -X POST "$GATEWAY/wallets" \
   -H "Authorization: Bearer $BOB_TOKEN" \
   -H "Content-Type: application/json" \
@@ -81,6 +93,15 @@ BOB_WALLET_RES=$(curl -s -X POST "$GATEWAY/wallets" \
 echo "Bob Wallet Response: $BOB_WALLET_RES"
 BOB_WALLET_ID=$(echo "$BOB_WALLET_RES" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
 BOB_WALLET_NUM=$(echo "$BOB_WALLET_RES" | grep -o '"walletNumber":"[^"]*' | head -1 | cut -d'"' -f4)
+
+if [ -z "$BOB_WALLET_ID" ]; then
+  echo "Fetching existing wallet for Bob..."
+  BOB_WALLETS=$(curl -s -X GET "$GATEWAY/wallets/user/$BOB_USER_ID" \
+    -H "Authorization: Bearer $BOB_TOKEN")
+  echo "Bob Existing Wallets: $BOB_WALLETS"
+  BOB_WALLET_ID=$(echo "$BOB_WALLETS" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+  BOB_WALLET_NUM=$(echo "$BOB_WALLETS" | grep -o '"walletNumber":"[^"]*' | head -1 | cut -d'"' -f4)
+fi
 echo "Bob Wallet ID: $BOB_WALLET_ID, Wallet Number: $BOB_WALLET_NUM"
 
 echo -e "\n8. Executing Peer-to-Peer Transfer: Alex ($ALEX_WALLET_ID) -> Bob ($BOB_WALLET_ID) for $250.00..."
@@ -97,9 +118,11 @@ TRANSFER_RES=$(curl -s -X POST "$GATEWAY/transactions/transfer" \
     \"description\": \"Project settlement transfer\"
   }")
 echo "Transfer Response: $TRANSFER_RES"
+TX_REF=$(echo "$TRANSFER_RES" | grep -o '"transactionRef":"[^"]*' | head -1 | cut -d'"' -f4)
+echo "Transaction Ref: $TX_REF"
 
-echo -e "\n9. Querying Transaction Ledger by Idempotency Key ($IDEMPOTENCY_KEY)..."
-TX_LOOKUP=$(curl -s -X GET "$GATEWAY/transactions/ref/$IDEMPOTENCY_KEY" \
+echo -e "\n9. Querying Transaction Ledger by Transaction Ref ($TX_REF)..."
+TX_LOOKUP=$(curl -s -X GET "$GATEWAY/transactions/ref/$TX_REF" \
   -H "Authorization: Bearer $ALEX_TOKEN")
 echo "Transaction Record: $TX_LOOKUP"
 
