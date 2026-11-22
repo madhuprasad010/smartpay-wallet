@@ -1,0 +1,101 @@
+# ============================================================
+# SmartPay Consolidated Backend — Production Profile (Render Free Tier / Cloud)
+# Designed for 512 MB RAM container constraints
+# Compatible with TiDB Cloud Starter & Upstash Redis
+# ============================================================
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+  tomcat:
+    threads:
+      max: 50
+      min-spare: 10
+    connection-timeout: 20000
+    max-connections: 1000
+
+spring:
+  application:
+    name: smartpay-backend
+
+  datasource:
+    # Supports full JDBC URL e.g. from TiDB Cloud or Render Environment
+    url: ${TIDB_DATABASE_URL:${MYSQL_URL:${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST}:${DB_PORT:4000}/${DB_NAME:test}?sslMode=VERIFY_IDENTITY&enabledTLSProtocols=TLSv1.2,TLSv1.3&serverTimezone=UTC}}}
+    username: ${TIDB_USER:${DB_USER}}
+    password: ${TIDB_PASSWORD:${DB_PASSWORD}}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: SmartPayProdHikariPool
+      maximum-pool-size: ${DB_POOL_MAX:4}
+      minimum-idle: ${DB_POOL_MIN:1}
+      idle-timeout: 180000
+      connection-timeout: 15000
+      max-lifetime: 600000
+      leak-detection-threshold: 30000
+      keepalive-time: 45000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        jdbc:
+          batch_size: 25
+          order_inserts: true
+          order_updates: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      # Upstash Redis rediss:// URL format supported
+      url: ${UPSTASH_REDIS_URL:${SPRING_DATA_REDIS_URL:}}
+      timeout: 2000
+
+# Optional Cloud Brokers (Default disabled for free tier)
+smartpay:
+  kafka:
+    enabled: ${SMARTPAY_KAFKA_ENABLED:false}
+  rabbitmq:
+    enabled: ${SMARTPAY_RABBITMQ_ENABLED:false}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET} # Injected securely via Render environment variable
+    expiration-ms: ${JWT_EXPIRATION_MS:900000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    redis:
+      enabled: false # Non-blocking health probe
+    mail:
+      enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.smartpay: INFO
+    org.springframework.boot: INFO
+    org.hibernate.SQL: ERROR

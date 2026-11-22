@@ -1,20 +1,20 @@
 # ============================================================
-# SmartPay Wallet — Render Blueprint Specification
-# Infrastructure-as-Code for 1-Click Deployment on Render
+# SmartPay Wallet — Render Blueprint Specification (Free Tier)
+# Infrastructure-as-Code for Free Cloud Deployment on Render
 # ============================================================
 
 version: "1"
 
 services:
   # -----------------------------------------------------------
-  # 1. FRONTEND: High-Performance React 19 Static Site (CDN)
+  # 1. FRONTEND: React 19 Static Site (Free Tier CDN)
   # -----------------------------------------------------------
   - type: web
     name: smartpay-web
     runtime: static
     buildCommand: cd frontend/smartpay-web && npm ci && npm run build
     staticPublishPath: frontend/smartpay-web/dist
-    pullRequestPreviewsEnabled: true
+    pullRequestPreviewsEnabled: false
     headers:
       - path: /*
         name: X-Frame-Options
@@ -28,154 +28,39 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://smartpay-api-gateway.onrender.com/api/v1
+        value: https://smartpay-backend.onrender.com/api/v1
 
   # -----------------------------------------------------------
-  # 2. PUBLIC API GATEWAY (Spring Cloud Gateway)
+  # 2. CONSOLIDATED BACKEND: Modular Spring Boot App (Free Tier)
   # -----------------------------------------------------------
   - type: web
-    name: smartpay-api-gateway
+    name: smartpay-backend
     runtime: docker
-    dockerfilePath: backend/api-gateway/Dockerfile
+    dockerfilePath: backend/Dockerfile
     dockerContext: backend
-    plan: starter
-    healthCheckPath: /actuator/health
+    plan: free
+    healthCheckPath: /actuator/health/liveness
     envVars:
-      - key: SERVER_PORT
+      - key: PORT
         value: "8080"
       - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
+        value: "prod"
       - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
+        value: "-XX:+UseSerialGC -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=35.0 -XX:+ExitOnOutOfMemoryError -XX:MaxMetaspaceSize=128m -Xss512k -Djava.security.egd=file:/dev/./urandom"
       - key: JWT_SECRET
         generateValue: true
-      - key: REDIS_HOST
-        fromService:
-          type: redis
-          name: smartpay-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: smartpay-redis
-          property: port
-
-  # -----------------------------------------------------------
-  # 3. PRIVATE MICROSERVICES (Internal Mesh Communication)
-  # -----------------------------------------------------------
-  - type: pserv
-    name: smartpay-auth-service
-    runtime: docker
-    dockerfilePath: backend/auth-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8081"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-      - key: JWT_SECRET
-        fromService:
-          type: web
-          name: smartpay-api-gateway
-          envVarKey: JWT_SECRET
-
-  - type: pserv
-    name: smartpay-user-service
-    runtime: docker
-    dockerfilePath: backend/user-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8082"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-
-  - type: pserv
-    name: smartpay-wallet-service
-    runtime: docker
-    dockerfilePath: backend/wallet-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8083"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-
-  - type: pserv
-    name: smartpay-transaction-service
-    runtime: docker
-    dockerfilePath: backend/transaction-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8084"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-
-  - type: pserv
-    name: smartpay-payment-service
-    runtime: docker
-    dockerfilePath: backend/payment-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8085"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-
-  - type: pserv
-    name: smartpay-beneficiary-service
-    runtime: docker
-    dockerfilePath: backend/beneficiary-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8086"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-
-  - type: pserv
-    name: smartpay-notification-service
-    runtime: docker
-    dockerfilePath: backend/notification-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8087"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-
-  - type: pserv
-    name: smartpay-audit-service
-    runtime: docker
-    dockerfilePath: backend/audit-service/Dockerfile
-    dockerContext: backend
-    envVars:
-      - key: SERVER_PORT
-        value: "8088"
-      - key: SPRING_PROFILES_ACTIVE
-        value: "docker"
-      - key: JAVA_TOOL_OPTIONS
-        value: "-Xms128m -Xmx384m -XX:+UseSerialGC"
-
-  # -----------------------------------------------------------
-  # 4. MANAGED CACHE
-  # -----------------------------------------------------------
-  - type: redis
-    name: smartpay-redis
-    ipAllowList: [] # Private network only
-    plan: starter
+      # External Database Configuration (TiDB Cloud Starter / MySQL Free Tier)
+      - key: TIDB_DATABASE_URL
+        sync: false
+      - key: TIDB_USER
+        sync: false
+      - key: TIDB_PASSWORD
+        sync: false
+      # External Redis Configuration (Upstash Free Tier rediss:// URL)
+      - key: UPSTASH_REDIS_URL
+        sync: false
+      # Optional Message Brokers (Disabled by default on free tier)
+      - key: SMARTPAY_KAFKA_ENABLED
+        value: "false"
+      - key: SMARTPAY_RABBITMQ_ENABLED
+        value: "false"
