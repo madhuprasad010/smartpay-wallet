@@ -6,6 +6,7 @@ import { FormField } from '@/components/forms/FormField'
 import { PasswordInput } from '@/components/forms/PasswordInput'
 import { authApi } from '@/services/endpoints/auth'
 import { useAuthStore } from '@/store/authStore'
+import { API_BASE_URL } from '@/constants'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -20,9 +21,11 @@ export function RegisterPage() {
     setLoading(true)
     try {
       const res = await authApi.register(form)
-      if (res.success && res.data) {
+      if (res && res.success && res.data) {
         setAuth(res.data.user, res.data.accessToken)
         navigate('/dashboard')
+      } else {
+        setError(res?.message || 'Registration failed. Please check your details.')
       }
     } catch (err) {
       setError(err.message || 'Registration failed')
@@ -39,7 +42,11 @@ export function RegisterPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="rounded-lg bg-rose-50 p-3 text-xs text-rose-600 dark:bg-rose-950/40">{error}</div>}
+          {error && (
+            <div className="rounded-lg bg-rose-50 p-3 text-xs leading-relaxed text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
+              {error}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <FormField
               label="First Name"
@@ -70,11 +77,19 @@ export function RegisterPage() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Creating Account...' : 'Register'}
           </Button>
+          {loading && (
+            <p className="text-center text-xs text-amber-600 dark:text-amber-400 animate-pulse">
+              Connecting to backend... If the service is waking up from sleep, this may take up to 45 seconds.
+            </p>
+          )}
           <div className="text-center text-sm text-slate-500">
             Already registered?{' '}
             <Link to="/login" className="text-blue-600 hover:underline">
               Sign In
             </Link>
+          </div>
+          <div className="mt-4 border-t border-slate-100 pt-3 text-center text-xs text-slate-400 dark:border-slate-800">
+            Backend API: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300 break-all">{API_BASE_URL}</code>
           </div>
         </form>
       </CardContent>
