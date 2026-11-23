@@ -1,6 +1,7 @@
 package com.smartpay.transaction.controller;
 
 import com.smartpay.common.dto.ApiResponse;
+import com.smartpay.transaction.dto.ReversalRequest;
 import com.smartpay.transaction.dto.TransactionDto;
 import com.smartpay.transaction.dto.TransferRequest;
 import com.smartpay.transaction.service.TransactionService;
@@ -24,6 +25,14 @@ public class TransactionController {
     public ResponseEntity<ApiResponse<TransactionDto>> transfer(@Valid @RequestBody TransferRequest request) {
         TransactionDto result = transactionService.processTransfer(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Transfer processed successfully", result));
+    }
+
+    @PostMapping("/{ref}/reverse")
+    public ResponseEntity<ApiResponse<TransactionDto>> reverse(
+            @PathVariable String ref,
+            @Valid @RequestBody ReversalRequest request) {
+        TransactionDto result = transactionService.reverseTransaction(ref, request.reason());
+        return ResponseEntity.ok(ApiResponse.success("Transaction reversed successfully with compensating entries", result));
     }
 
     @GetMapping("/{id}")

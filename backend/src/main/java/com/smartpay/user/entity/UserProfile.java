@@ -39,6 +39,19 @@ public class UserProfile {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
+    @Column(name = "kyc_status", length = 30)
+    @Builder.Default
+    private String kycStatus = "UNVERIFIED";
+
+    @Column(name = "kyc_document_type", length = 50)
+    private String kycDocumentType;
+
+    @Column(name = "kyc_document_number", length = 100)
+    private String kycDocumentNumber;
+
+    @Column(name = "kyc_verified_at")
+    private Instant kycVerifiedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

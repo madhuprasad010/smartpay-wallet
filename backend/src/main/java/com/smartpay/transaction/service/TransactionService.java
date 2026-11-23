@@ -3,6 +3,7 @@ package com.smartpay.transaction.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartpay.common.exception.BusinessException;
 import com.smartpay.common.exception.ResourceNotFoundException;
+import com.smartpay.common.service.IdempotencyService;
 import com.smartpay.config.KafkaEventPublisher;
 import com.smartpay.transaction.dto.TransactionDto;
 import com.smartpay.transaction.dto.TransferRequest;
@@ -34,15 +35,31 @@ public class TransactionService {
     private final OutboxEventRepository outboxEventRepository;
     private final WalletService walletService;
     private final KafkaEventPublisher kafkaPublisher;
+    private final IdempotencyService idempotencyService;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public TransactionDto processTransfer(TransferRequest request) {
-        // 1. Idempotency check: return existing transaction if key was already processed
+        String requestHash = idempotencyService.computeHash(request);
+
+        // 1. Check idempotency record
+        Optional<TransactionDto> cached = idempotencyService.getExistingResponse(
+                request.idempotencyKey(),
+                requestHash,
+                TransactionDto.class
+        );
+        if (cached.isPresent()) {
+            log.info("Idempotency hit for key: {}", request.idempotencyKey());
+            return cached.get();
+        }
+
+        // Also check transaction table for idempotency key
         Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(request.idempotencyKey());
         if (existing.isPresent()) {
-            log.info("Idempotent hit for key: {}", request.idempotencyKey());
-            return mapToDto(existing.get());
+            log.info("Idempotent hit in transaction table for key: {}", request.idempotencyKey());
+            TransactionDto dto = mapToDto(existing.get());
+            idempotencyService.recordSuccess(request.idempotencyKey(), requestHash, dto);
+            return dto;
         }
 
         if (request.sourceWalletId().equals(request.destWalletId())) {
@@ -50,12 +67,12 @@ public class TransactionService {
         }
 
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Transfer amount must be greater than zero");
+            throw new BusinessException("Transfer amount must be strictly greater than zero");
         }
 
         String transactionRef = "TXN-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase();
 
-        // 2. Atomic double-entry transfer with pessimistic locking
+        // 2. Atomic double-entry transfer with deterministic locking & limit checks
         walletService.executeTransfer(
                 request.sourceWalletId(),
                 request.destWalletId(),
@@ -79,17 +96,27 @@ public class TransactionService {
                 .build();
 
         Transaction saved = transactionRepository.save(txn);
+        TransactionDto responseDto = mapToDto(saved);
+
+        // Record in idempotency registry
+        idempotencyService.recordSuccess(request.idempotencyKey(), requestHash, responseDto);
 
         // 4. Transactional Outbox pattern
         try {
             Map<String, Object> eventData = Map.of(
+                    "eventId", UUID.randomUUID().toString(),
                     "eventType", "TRANSACTION_COMPLETED",
-                    "transactionRef", saved.getTransactionRef(),
-                    "sourceWalletId", saved.getSourceWalletId(),
-                    "destWalletId", saved.getDestWalletId(),
-                    "amount", saved.getAmount(),
-                    "currency", saved.getCurrency(),
-                    "timestamp", Instant.now().toString()
+                    "eventVersion", "v1",
+                    "aggregateId", saved.getTransactionRef(),
+                    "occurredAt", Instant.now().toString(),
+                    "correlationId", UUID.randomUUID().toString(),
+                    "payload", Map.of(
+                            "transactionRef", saved.getTransactionRef(),
+                            "sourceWalletId", saved.getSourceWalletId(),
+                            "destWalletId", saved.getDestWalletId(),
+                            "amount", saved.getAmount(),
+                            "currency", saved.getCurrency()
+                    )
             );
 
             OutboxEvent outbox = OutboxEvent.builder()
@@ -97,18 +124,64 @@ public class TransactionService {
                     .aggregateId(saved.getTransactionRef())
                     .eventType("TRANSACTION_COMPLETED")
                     .payload(objectMapper.writeValueAsString(eventData))
-                    .status("PUBLISHED")
-                    .sentAt(Instant.now())
+                    .status("PENDING") // Processed by Outbox Poller
                     .build();
             outboxEventRepository.save(outbox);
 
-            // 5. Optional Kafka dispatch
-            kafkaPublisher.send("smartpay.transaction.events", saved.getTransactionRef(), eventData);
+            // Immediate optional dispatch attempt
+            kafkaPublisher.send("smartpay.transaction.events.v1", saved.getTransactionRef(), eventData);
         } catch (Exception e) {
             log.warn("Outbox dispatch notification error: {}", e.getMessage());
         }
 
-        return mapToDto(saved);
+        return responseDto;
+    }
+
+    @Transactional
+    public TransactionDto reverseTransaction(String transactionRef, String reason) {
+        Transaction original = transactionRepository.findByTransactionRef(transactionRef)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with ref: " + transactionRef));
+
+        if (original.getStatus() != TransactionStatus.COMPLETED) {
+            throw new BusinessException("Cannot reverse transaction in status: " + original.getStatus());
+        }
+        if (original.getType() != TransactionType.TRANSFER) {
+            throw new BusinessException("Only peer-to-peer transfers can be reversed through this operation");
+        }
+
+        String reversalRef = "REV-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase();
+
+        // Execute compensating double-entry debit & credit
+        walletService.executeCompensatingReversal(
+                original.getSourceWalletId(),
+                original.getDestWalletId(),
+                original.getAmount(),
+                original.getTransactionRef(),
+                reversalRef,
+                reason
+        );
+
+        // Create reversal transaction entry
+        Transaction revTxn = Transaction.builder()
+                .transactionRef(reversalRef)
+                .idempotencyKey("IDEMP-" + reversalRef)
+                .sourceWalletId(original.getDestWalletId())
+                .destWalletId(original.getSourceWalletId())
+                .amount(original.getAmount())
+                .currency(original.getCurrency())
+                .status(TransactionStatus.COMPLETED)
+                .type(TransactionType.REVERSAL)
+                .description("Reversal of " + original.getTransactionRef() + " (" + reason + ")")
+                .completedAt(Instant.now())
+                .build();
+
+        Transaction savedReversal = transactionRepository.save(revTxn);
+
+        // Mark original as reversed
+        original.setStatus(TransactionStatus.REVERSED);
+        transactionRepository.save(original);
+
+        return mapToDto(savedReversal);
     }
 
     @Transactional(readOnly = true)

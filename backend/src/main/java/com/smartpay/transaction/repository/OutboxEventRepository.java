@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> {
     List<OutboxEvent> findByStatusOrderByCreatedAtAsc(String status);
+    List<OutboxEvent> findTop50ByStatusOrderByCreatedAtAsc(String status);
 }

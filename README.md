@@ -1,211 +1,220 @@
-```
- ____                       _   ____
-/ ___| _ __ ___   __ _ _ __| |_|  _ \ __ _ _   _
-\___ \| '_ ` _ \ / _` | '__| __| |_) / _` | | | |
- ___) | | | | | | (_| | |  | |_|  __/ (_| | |_| |
-|____/|_| |_| |_|\__,_|_|   \__|_|   \__,_|\__, |
-                                            |___/
-```
-
 # SmartPay — Digital Banking & Wallet Management Platform
 
-> A production-grade FinTech digital banking and wallet platform built with Spring Boot 3.5, React 19, and a consolidated modular architecture optimized for high performance, financial consistency, and 100% free cloud deployment on Render.com.
+> A production-grade FinTech digital banking and wallet platform built with Java 21, Spring Boot 3.5, React 19, and a consolidated modular architecture engineered for financial consistency, immutable double-entry ledger bookkeeping, and 100% free cloud deployment (₹0/month without credit card requirements).
 
-[![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.3-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
-[![Render](https://img.shields.io/badge/Render-Free%20Tier-46E3B7?logo=render)](https://render.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Java 21](https://img.shields.io/badge/Java-21-orange?logo=openjdk)](https://openjdk.org/)
+[![Spring Boot 3.5](https://img.shields.io/badge/Spring%20Boot-3.5.3-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![Render Free Tier](https://img.shields.io/badge/Render-Free%20Tier%20(₹0)-46E3B7?logo=render)](https://render.com)
+[![MySQL 8.4](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql)](https://mysql.com)
 
 ---
 
 ## Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Financial Guarantees](#financial-guarantees)
-- [Architecture](#architecture)
-- [Technology Stack](#technology-stack)
-- [Cloud Deployment (Render 100% Free)](#cloud-deployment-render-100-free)
-- [Local Quick Start](#local-quick-start)
-- [Service Endpoints](#service-endpoints)
-- [Testing & Quality Assurance](#testing--quality-assurance)
-- [API Documentation](#api-documentation)
-- [Documentation Index](#documentation-index)
-- [License](#license)
-
----
-
-## Overview
-
-SmartPay is a full-featured digital banking and wallet management platform designed for scale, financial correctness, and operational simplicity.
-
-The platform provides a modern digital banking user interface backed by a **consolidated modular Spring Boot backend** with strict domain boundaries and zero external runtime dependencies on the critical payment path.
-
----
-
-## Key Features
-
-- **Multi-Wallet Management** — Create and manage multiple digital wallets per user.
-- **Double-Entry Bookkeeping** — Immutable, GAAP-compliant financial ledger for every balance change.
-- **Atomic Peer-to-Peer Transfers** — Real-time wallet-to-wallet transfers with deterministic pessimistic locking.
-- **Idempotent Payment Processing** — Guaranteed exactly-once execution via unique idempotency keys.
-- **Transactional Outbox Pattern** — Guaranteed event delivery without distributed two-phase commit overhead.
-- **Beneficiary Management** — Save and manage transfer recipients with account validation.
-- **Audit Trail & Observability** — Immutable audit event logging and Prometheus/Grafana metrics.
-- **Stateless Authentication** — Secure JWT authentication with HMAC-SHA signing and UUID refresh token rotation.
+1. [Project Overview](#1-project-overview)
+2. [Architecture](#2-architecture)
+3. [Technology Stack](#3-technology-stack)
+4. [Prerequisites](#4-prerequisites)
+5. [Local Installation](#5-local-installation)
+6. [Docker Installation](#6-docker-installation)
+7. [Environment Configuration](#7-environment-configuration)
+8. [Database Migration Instructions](#8-database-migration-instructions)
+9. [Backend Startup](#9-backend-startup)
+10. [Frontend Startup](#10-frontend-startup)
+11. [Test Commands](#11-test-commands)
+12. [GitHub Setup](#12-github-setup)
+13. [Render Deployment](#13-render-deployment)
+14. [TiDB Setup](#14-tidb-setup)
+15. [Upstash Redis Setup](#15-upstash-redis-setup)
+16. [Aiven Kafka Setup](#16-aiven-kafka-setup)
+17. [CloudAMQP Setup](#17-cloudamqp-setup)
+18. [Environment Variable Configuration](#18-environment-variable-configuration)
+19. [Deployment Troubleshooting](#19-deployment-troubleshooting)
+20. [Free-Tier Limitations](#20-free-tier-limitations)
+21. [Security Considerations](#21-security-considerations)
+22. [Demo Instructions](#22-demo-instructions)
 
 ---
 
-## Financial Guarantees
+## 1. Project Overview
+SmartPay is a comprehensive digital banking and wallet management system. It provides real business logic, database persistence, authentication and authorization, atomic transaction processing, event-driven messaging, automated tests, Docker support, and cloud deployment guides.
 
-Financial correctness is SmartPay's highest priority:
-
-1. **Double-Entry Ledger Invariant**: Every debit to a source wallet is paired with an equal and opposite credit to a destination wallet. Sum of ledger debits always equals sum of ledger credits.
-2. **Deterministic Locking Order**: Concurrent transfers between two wallets always lock the lower wallet ID first, preventing database deadlocks (`LockModeType.PESSIMISTIC_WRITE`).
-3. **Idempotency Safeguard**: Replaying identical requests with the same `Idempotency-Key` returns the original cached response with zero duplicate ledger entries.
-4. **Authoritative Relational Truth**: Redis is used strictly for transient caching and token blacklists. The relational database (MySQL/TiDB) is the sole source of truth.
-
----
-
-## Architecture
-
-SmartPay uses a **consolidated modular monolith** architecture designed to fit within Render's 512 MB free tier container while maintaining clean domain boundaries:
-
-```mermaid
-flowchart TD
-    subgraph Client
-        A["React 19 Frontend\n(Render Static Site / Vite)"]
-    end
-
-    subgraph Reverse Proxy
-        B["Nginx\n:80 (Local Dev)"]
-    end
-
-    subgraph Consolidated Backend [Spring Boot 3.5.3 / Java 21]
-        C["Security & JWT Filter"]
-        
-        subgraph Business Domains
-            D["Auth Module\n(/api/v1/auth)"]
-            E["User Module\n(/api/v1/users)"]
-            F["Wallet Module\n(/api/v1/wallets)"]
-            G["Transaction Module\n(/api/v1/transactions)"]
-            H["Payment Module\n(/api/v1/payments)"]
-            I["Beneficiary Module\n(/api/v1/beneficiaries)"]
-            J["Notification Module\n(/api/v1/notifications)"]
-            K["Audit Module\n(/api/v1/audit)"]
-        end
-    end
-
-    subgraph Data Stores
-        L[("MySQL 8.4 / TiDB Cloud\n(Double-Entry Ledger)")]
-        M[("Redis / Upstash\n(Cache & Blacklist)")]
-    end
-
-    A -->|"HTTPS /api/v1/*"| C
-    B -->|"/api/*"| C
-    C --> D & E & F & G & H & I & J & K
-    D & E & F & G & H & I & J & K --> L
-    D & F & G --> M
-```
+### Core Capabilities
+- **Authentication & Security**: BCrypt password hashing, JWT stateless access tokens, refresh token rotation, refresh token reuse detection, login failure lockout.
+- **Wallet & Account Management**: Creation of multi-currency wallets (INR default, USD, EUR, GBP), freeze/unfreeze controls, velocity limits (daily & per-transaction).
+- **Double-Entry Ledger**: Atomic debit & credit ledger entries for every balance movement. Reversals create compensating entries without altering historical records.
+- **Payment Simulation Adapter**: Top-up deposits, payouts, webhooks, and refunds without paid subscriptions or real card collection.
+- **Beneficiaries**: Payee management with direct wallet-to-wallet and simulated bank transfers.
+- **Administration & Audit**: System audit logs, KYC approvals, account freeze controls, and authoritative balance reconciliation.
 
 ---
 
-## Technology Stack
+## 2. Architecture
+SmartPay is organized as a **modular monolith designed with microservice boundaries**. It packages eight distinct business modules into a single executable Spring Boot deployment:
+1. **Auth Module (`com.smartpay.auth`)**
+2. **User Module (`com.smartpay.user`)**
+3. **Wallet Module (`com.smartpay.wallet`)**
+4. **Transaction Module (`com.smartpay.transaction`)**
+5. **Payment Module (`com.smartpay.payment`)**
+6. **Beneficiary Module (`com.smartpay.beneficiary`)**
+7. **Notification Module (`com.smartpay.notification`)**
+8. **Audit Module (`com.smartpay.audit`)**
 
-| Layer | Technology | Details |
-|---|---|---|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS, Lucide Icons | High-speed SPA with responsive FinTech dashboard |
-| **Backend** | Java 21, Spring Boot 3.5.3, Spring Security | Consolidated modular architecture (~350 MB RAM) |
-| **Database** | MySQL 8.4 (Local) / TiDB Cloud Serverless (Cloud) | ACID transactions, pessimistic locking, Flyway migrations |
-| **Cache** | Redis 7 (Local) / Upstash Serverless Redis (Cloud) | Non-blocking token blacklist and rate-limiting |
-| **Security** | JJWT 0.12.6, BCrypt | Stateless JWT access + UUID refresh token rotation |
-| **Container** | Docker Multi-Stage (Eclipse Temurin JRE 21 Alpine) | Lightweight production image (172 MB compressed) |
-| **Observability**| Spring Boot Actuator, Micrometer, Prometheus, Grafana | Health checks, metrics, and dashboards |
+All modules interact through typed service contracts and the **Transactional Outbox Pattern** to ensure financial integrity even during network or broker outages.
 
----
-
-## Cloud Deployment (Render 100% Free)
-
-Deploy the entire full-stack platform for free with zero credit card required:
-
-1. **Database**: Create a free Serverless Cluster on **[TiDB Cloud](https://tidbcloud.com)**.
-2. **Cache**: Create a free database on **[Upstash](https://upstash.com)**.
-3. **Deploy via Render Blueprint**:
-   - Fork/push this repository to GitHub.
-   - Go to **[Render Dashboard](https://dashboard.render.com)** → **New +** → **Blueprint**.
-   - Connect your repository. Render automatically provisions:
-     - `smartpay-web`: Static Site (React 19, free global CDN)
-     - `smartpay-backend`: Web Service (Docker container, free 512 MB tier)
-   - Supply your TiDB JDBC URL and Upstash Redis URL in the environment variables.
-   - Click **Apply**.
-
-> See the complete step-by-step instructions in [docs/RENDER-DEPLOYMENT.md](docs/RENDER-DEPLOYMENT.md).
+Detailed documentation: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ---
 
-## Local Quick Start
+## 3. Technology Stack
 
-### 1. Prerequisites
-- Docker & Docker Compose
-- JDK 21 (for native development)
-- Node.js 20+ & npm
+### Backend
+- **Java 21** & **Spring Boot 3.5.3**
+- **Spring Web**, **Spring Data JPA**, **Hibernate** (`ddl-auto: validate`)
+- **Spring Security** & **JJWT 0.12.6**
+- **Flyway Database Migrations** (MySQL/TiDB compatible)
+- **Spring Actuator** & **Micrometer Prometheus**
+- **Spring Kafka** & **Spring AMQP (RabbitMQ)** (Conditional & resilient)
+- **Spring Data Redis** (Cache-aside & rate limiting)
+- **Maven** build automation
 
-### 2. Launch Stack via Docker Compose
+### Frontend
+- **React 19**, **Vite 6**, **TypeScript/JavaScript**
+- **Tailwind CSS** & **Lucide React** icons
+- **React Router 7**, **Axios**, **Zustand**
+- **Recharts** for interactive financial data visualization
+- **Vitest** & **Testing Library**
+
+### Database & Messaging
+- **MySQL 8.4** (Local Docker) / **TiDB Cloud Starter** (Cloud Production)
+- **Redis 7** (Local Docker) / **Upstash Redis Free** (Cloud Production)
+- **Apache Kafka KRaft** (Local Docker) / **Aiven Kafka Free** (Cloud Production)
+- **RabbitMQ 3.13** (Local Docker) / **CloudAMQP Free Tier** (Cloud Production)
+
+---
+
+## 4. Prerequisites
+- **JDK 21** installed locally.
+- **Maven 3.9+** installed locally.
+- **Node.js 20+** and **npm 10+**.
+- **Docker Desktop** (optional for local full-stack containerization).
+
+---
+
+## 5. Local Installation
+
+Clone the repository:
 ```bash
-# Clone and enter directory
+git clone https://github.com/<your-username>/smartpay-wallet.git
 cd smartpay-wallet
-
-# Copy environment variables
-cp .env.example .env
-
-# Build and start services (Backend, Frontend, MySQL, Redis, Nginx)
-docker compose up -d --build
 ```
 
-### 3. Native Backend Development
+Install backend dependencies:
 ```bash
-# Run Flyway migrations and start Spring Boot locally
 cd backend
-mvn clean spring-boot:run
+mvn clean install -DskipTests
+cd ..
 ```
 
-### 4. Native Frontend Development
+Install frontend dependencies:
 ```bash
 cd frontend/smartpay-web
 npm install
-npm run dev
-# Opens on http://localhost:5173
+cd ../..
 ```
 
 ---
 
-## Service Endpoints
+## 6. Docker Installation
 
-| Service / Component | Local Port | URL |
-|---|---|---|
-| **Frontend (Production)** | `3000` | http://localhost:3000 |
-| **Frontend (Vite Dev)** | `5173` | http://localhost:5173 |
-| **Nginx Reverse Proxy** | `80` | http://localhost |
-| **Consolidated Backend** | `8080` | http://localhost:8080 |
-| **Swagger UI** | `8080` | http://localhost:8080/swagger-ui.html |
-| **Liveness Check** | `8080` | http://localhost:8080/actuator/health/liveness |
-| **Readiness Check** | `8080` | http://localhost:8080/actuator/health/readiness |
-| **Prometheus** | `9090` | http://localhost:9090 |
-| **Grafana** | `3001` | http://localhost:3001 (`admin` / `changeme_grafana`) |
+Start all 10 local services (Backend, Frontend, MySQL 8.4, Redis 7, Kafka KRaft, RabbitMQ, Prometheus, Grafana, Nginx reverse proxy):
+```bash
+# 1. Copy sample environment file
+cp .env.example .env
+
+# 2. Build and start containers
+docker compose up -d --build
+
+# 3. Verify running containers
+docker compose ps
+```
+
+Local access URLs:
+- **Frontend App**: `http://localhost:3000` (or `http://localhost` via Nginx)
+- **Backend API**: `http://localhost:8080`
+- **Swagger Documentation**: `http://localhost:8080/swagger-ui.html`
+- **RabbitMQ Dashboard**: `http://localhost:15672` (user: `smartpay`, pass: `changeme_rabbitmq_password`)
+- **Grafana Dashboard**: `http://localhost:3001` (user: `admin`, pass: `changeme_grafana_password`)
+- **Prometheus Metrics**: `http://localhost:9090`
 
 ---
 
-## Testing & Quality Assurance
+## 7. Environment Configuration
+Configuration is managed via `.env` locally and dashboard environment variables in the cloud. Refer to `.env.example` for all documented keys.
 
-### Run Backend Unit & Integration Tests
+Key variables:
+- `SPRING_PROFILES_ACTIVE`: `local` or `prod`
+- `PORT`: HTTP port (`8080`)
+- `TIDB_DATABASE_URL`: JDBC connection string for TiDB Cloud
+- `UPSTASH_REDIS_URL`: `rediss://` connection string for Upstash
+- `JWT_SECRET`: 256-bit hexadecimal string
+
+---
+
+## 8. Database Migration Instructions
+Database migrations are automatically applied on application boot by Flyway:
+- `V1__init_schema.sql`: Core tables (users, wallets, transactions, ledger, payments, outbox).
+- `V2__add_missing_enterprise_tables.sql`: Enterprise tables (limits, idempotency records, KYC, processed events, webhooks).
+
+To manually check migration status:
+```bash
+cd backend
+mvn flyway:info
+```
+
+---
+
+## 9. Backend Startup
+To run the backend independently against a local MySQL instance:
+```bash
+cd backend
+export SPRING_PROFILES_ACTIVE=local
+export DB_HOST=localhost
+export DB_PORT=3307
+export DB_NAME=smartpay
+export DB_USER=smartpay
+export DB_PASSWORD=changeme
+mvn spring-boot:run
+```
+
+---
+
+## 10. Frontend Startup
+To start the React/Vite development server:
+```bash
+cd frontend/smartpay-web
+npm run dev
+```
+Open `http://localhost:5173` in your browser.
+
+---
+
+## 11. Test Commands
+
+Run backend automated test suite:
 ```bash
 cd backend
 mvn test
 ```
-All core financial invariants, double-entry ledger transfers, idempotency replays, and JWT authentication flows are validated with 100% pass rate.
 
-### Run Frontend Build Verification
+Run frontend vitest suite:
+```bash
+cd frontend/smartpay-web
+npm test -- --run
+```
+
+Run frontend production build verification:
 ```bash
 cd frontend/smartpay-web
 npm run build
@@ -213,32 +222,104 @@ npm run build
 
 ---
 
-## API Documentation
-
-| Domain | Base Route | Description |
-|---|---|---|
-| **Authentication** | `/api/v1/auth/*` | Register, login, refresh tokens, logout |
-| **Users** | `/api/v1/users/*` | Profile inspection and updates |
-| **Wallets** | `/api/v1/wallets/*` | Wallet creation, balance queries, credit operations |
-| **Transactions** | `/api/v1/transactions/*` | Atomic P2P transfers, history, ledger entries |
-| **Payments** | `/api/v1/payments/*` | Payment processing and status lifecycle |
-| **Beneficiaries** | `/api/v1/beneficiaries/*` | Beneficiary recipient management |
-| **Notifications** | `/api/v1/notifications/*` | Notification inbox and read status |
-| **Audit** | `/api/v1/audit/*` | Audit trail queries for compliance |
+## 12. GitHub Setup
+1. Create a repository on GitHub named `smartpay-wallet`.
+2. Push your codebase:
+   ```bash
+   git add .
+   git commit -m "feat: complete SmartPay platform"
+   git push origin main
+   ```
 
 ---
 
-## Documentation Index
+## 13. Render Deployment
+- **Backend**: Deploy as a Render Free Web Service using Docker (`backend/Dockerfile`).
+- **Frontend**: Deploy as a Render Static Site (`frontend/smartpay-web/dist`).
+- **Cost**: ₹0 / month (No credit card required).
 
-- [Cloud Deployment Guide (Render Free Tier)](docs/RENDER-DEPLOYMENT.md)
-- [System Architecture](docs/ARCHITECTURE.md)
-- [Database Schema & ERD](docs/DATABASE.md)
-- [REST API Reference](docs/API-DOCUMENTATION.md)
-- [Security Model](docs/SECURITY.md)
-- [Infrastructure Setup](docs/INFRASTRUCTURE.md)
+Step-by-step walkthrough: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
 
 ---
 
-## License
+## 14. TiDB Setup
+1. Register on [tidbcloud.com](https://tidbcloud.com) (No credit card needed).
+2. Create a free **Starter** cluster.
+3. Create the database: `CREATE DATABASE smartpay;`
+4. Copy the JDBC connection URL with SSL enabled:
+   `jdbc:mysql://<host>:4000/smartpay?sslMode=VERIFY_IDENTITY&enabledTLSProtocols=TLSv1.2,TLSv1.3&serverTimezone=UTC`
 
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+---
+
+## 15. Upstash Redis Setup
+1. Register on [console.upstash.com](https://console.upstash.com) (No credit card needed).
+2. Create a database with **TLS enabled**.
+3. Copy the `rediss://` connection URL.
+4. Set as `UPSTASH_REDIS_URL` in the Render dashboard.
+
+---
+
+## 16. Aiven Kafka Setup
+1. Register on [aiven.io](https://aiven.io) (Free trial / Free plan).
+2. Provision free Kafka cluster with 5 primary topics:
+   - `smartpay.user.events.v1`
+   - `smartpay.wallet.events.v1`
+   - `smartpay.transaction.events.v1`
+   - `smartpay.payment.events.v1`
+   - `smartpay.notification.events.v1`
+3. Configure `KAFKA_BOOTSTRAP_SERVERS` and SASL credentials.
+
+---
+
+## 17. CloudAMQP Setup
+1. Register on [cloudamqp.com](https://cloudamqp.com).
+2. Provision a free **Little Lemur** instance (₹0 / month).
+3. Copy the AMQP connection URL.
+4. Set `SMARTPAY_RABBITMQ_ENABLED=true` when active.
+
+---
+
+## 18. Environment Variable Configuration
+Refer to [.env.example](.env.example) for the exhaustive list of environment variables and dashboard mappings.
+
+---
+
+## 19. Deployment Troubleshooting
+- **Backend sleeping on inactivity**: Render free tier instances sleep after 15 minutes of inactivity. Initial wake-up takes 30-50 seconds.
+- **TiDB handshake error**: Verify `sslMode=VERIFY_IDENTITY` and `enabledTLSProtocols=TLSv1.2,TLSv1.3` are present in `TIDB_DATABASE_URL`.
+- **Out of Memory (OOM)**: Ensure `JAVA_TOOL_OPTIONS` includes `-XX:+UseSerialGC -XX:MaxRAMPercentage=75.0 -XX:MaxMetaspaceSize=128m -Xss512k`.
+
+---
+
+## 20. Free-Tier Limitations
+- **Render Web Service**: 512 MB RAM, sleeps after inactivity, 750 free instance-hours per workspace per month.
+- **TiDB Cloud Starter**: 5 GB storage limit, 50 million Request Units per month.
+- **Upstash Redis**: 10,000 commands per day, 256 MB storage.
+
+---
+
+## 21. Security Considerations
+- Zero secrets committed to Git repository.
+- Sensitive values read strictly through environment variables.
+- Passwords protected by BCrypt hashing.
+- Idempotency prevents double-spending.
+- Deterministic locking prevents concurrency deadlocks.
+
+---
+
+## 22. Demo Instructions
+1. Navigate to your deployed application or `http://localhost:3000`.
+2. **Register a Customer**:
+   - Register at `/register` -> Automatic welcome credit of ₹1,000.00 is provisioned.
+3. **Execute a Transfer**:
+   - Register a second customer in another tab.
+   - Transfer ₹250.00 from Customer 1 to Customer 2 at `/transfer`.
+   - Inspect the real-time balance reduction and balanced double-entry ledger entries at `/wallets`.
+4. **Deposit & Withdrawal**:
+   - Use `/deposit` to simulate adding ₹2,500.00 via simulated UPI.
+   - Use `/withdraw` to simulate withdrawing ₹500.00 via IMPS.
+5. **Admin Operations**:
+   - Log in as `admin@smartpay.io` / `Admin@SmartPay2026!`.
+   - Navigate to `/admin`.
+   - Click **Reconcile All Wallets** to execute an authoritative balance vs. ledger audit across all customer accounts.
+   - Manage users at `/admin/users` and inspect forensic audit logs at `/admin/audit`.

@@ -29,13 +29,17 @@ until $KAFKA_TOPICS --bootstrap-server "$BOOTSTRAP" --list &>/dev/null; do
 done
 echo "==> Kafka broker is ready."
 
-# --- Primary event topics ---
+# --- Primary 5 event topics matching Master Architecture & Aiven Quota ---
 TOPICS=(
+  "smartpay.user.events.v1"
+  "smartpay.wallet.events.v1"
+  "smartpay.transaction.events.v1"
+  "smartpay.payment.events.v1"
+  "smartpay.notification.events.v1"
   "smartpay.user.events"
   "smartpay.wallet.events"
   "smartpay.transaction.events"
   "smartpay.payment.events"
-  "smartpay.audit.events"
 )
 
 for TOPIC in "${TOPICS[@]}"; do
@@ -51,27 +55,5 @@ for TOPIC in "${TOPICS[@]}"; do
     --config cleanup.policy=delete
 done
 
-# --- Dead Letter Topics (DLT) ---
-DLT_TOPICS=(
-  "smartpay.user.events.dlt"
-  "smartpay.wallet.events.dlt"
-  "smartpay.transaction.events.dlt"
-  "smartpay.payment.events.dlt"
-  "smartpay.audit.events.dlt"
-)
-
-for TOPIC in "${DLT_TOPICS[@]}"; do
-  echo "==> Creating DLT topic: ${TOPIC}"
-  $KAFKA_TOPICS \
-    --bootstrap-server "$BOOTSTRAP" \
-    --create \
-    --if-not-exists \
-    --topic "$TOPIC" \
-    --partitions 1 \
-    --replication-factor "$REPLICATION" \
-    --config retention.ms=2592000000 \
-    --config cleanup.policy=delete
-done
-
-echo "==> All Kafka topics created successfully."
+echo "==> All Kafka topics verified."
 $KAFKA_TOPICS --bootstrap-server "$BOOTSTRAP" --list

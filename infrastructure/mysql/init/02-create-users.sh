@@ -2,6 +2,10 @@
 set -e
 
 mysql -u root -p"${MYSQL_ROOT_PASSWORD}" <<-EOSQL
+  -- Consolidated Backend User & Database
+  CREATE USER IF NOT EXISTS '${DB_USER:-smartpay}'@'%' IDENTIFIED BY '${DB_PASSWORD:-changeme}';
+  GRANT ALL PRIVILEGES ON ${DB_NAME:-smartpay}.* TO '${DB_USER:-smartpay}'@'%';
+
   -- Auth Service
   CREATE USER IF NOT EXISTS '${AUTH_DB_USER:-auth_service}'@'%' IDENTIFIED BY '${AUTH_DB_PASSWORD:-changeme_auth}';
   GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, DROP, REFERENCES

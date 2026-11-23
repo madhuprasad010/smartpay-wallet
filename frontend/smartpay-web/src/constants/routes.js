@@ -2,15 +2,18 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   REGISTER: '/register',
-  FORGOT_PASSWORD: '/forgot-password',
   DASHBOARD: '/dashboard',
+  PROFILE: '/profile',
   WALLETS: '/wallets',
-  WALLET_DETAIL: '/wallets/:id',
+  TRANSFER: '/transfer',
+  DEPOSIT: '/deposit',
+  WITHDRAWAL: '/withdraw',
   TRANSACTIONS: '/transactions',
-  TRANSACTION_DETAIL: '/transactions/:id',
-  PAYMENTS: '/payments',
   BENEFICIARIES: '/beneficiaries',
   NOTIFICATIONS: '/notifications',
   SETTINGS: '/settings',
-  ADMIN: '/admin'
+  ADMIN_DASHBOARD: '/admin',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_TRANSACTIONS: '/admin/transactions',
+  ADMIN_AUDIT: '/admin/audit'
 }

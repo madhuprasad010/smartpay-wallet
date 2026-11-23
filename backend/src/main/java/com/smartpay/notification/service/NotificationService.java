@@ -11,6 +11,8 @@ import com.smartpay.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,6 +70,16 @@ public class NotificationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public Page<NotificationDto> getUserNotificationsPaged(Long userId, Pageable pageable) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable).map(this::mapToDto);
+    }
+
+    @Transactional(readOnly = true)
+    public long getUnreadCount(Long userId) {
+        return notificationRepository.countByUserIdAndStatus(userId, NotificationStatus.SENT);
+    }
+
     @Transactional
     public NotificationDto markAsRead(Long id) {
         Notification n = notificationRepository.findById(id)
@@ -75,6 +87,11 @@ public class NotificationService {
         n.setStatus(NotificationStatus.READ);
         Notification saved = notificationRepository.save(n);
         return mapToDto(saved);
+    }
+
+    @Transactional
+    public void markAllAsRead(Long userId) {
+        notificationRepository.markAllAsReadByUserId(userId);
     }
 
     private NotificationDto mapToDto(Notification n) {

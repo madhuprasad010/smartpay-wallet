@@ -39,25 +39,25 @@
   ],
   "exchanges": [
     {
+      "name": "smartpay.notification.exchange",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "smartpay.audit.exchange",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
       "name": "smartpay.notifications",
-      "vhost": "/",
-      "type": "topic",
-      "durable": true,
-      "auto_delete": false,
-      "internal": false,
-      "arguments": {}
-    },
-    {
-      "name": "smartpay.documents",
-      "vhost": "/",
-      "type": "topic",
-      "durable": true,
-      "auto_delete": false,
-      "internal": false,
-      "arguments": {}
-    },
-    {
-      "name": "smartpay.background",
       "vhost": "/",
       "type": "topic",
       "durable": true,
@@ -77,72 +77,32 @@
   ],
   "queues": [
     {
+      "name": "smartpay.notification.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "smartpay.dlx",
+        "x-dead-letter-routing-key": "dlq",
+        "x-message-ttl": 86400000
+      }
+    },
+    {
+      "name": "smartpay.notification.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "smartpay.audit.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
       "name": "smartpay.email.queue",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {
-        "x-dead-letter-exchange": "smartpay.dlx",
-        "x-dead-letter-routing-key": "dlq",
-        "x-message-ttl": 86400000
-      }
-    },
-    {
-      "name": "smartpay.push.queue",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {
-        "x-dead-letter-exchange": "smartpay.dlx",
-        "x-dead-letter-routing-key": "dlq",
-        "x-message-ttl": 86400000
-      }
-    },
-    {
-      "name": "smartpay.documents.queue",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {
-        "x-dead-letter-exchange": "smartpay.dlx",
-        "x-dead-letter-routing-key": "dlq",
-        "x-message-ttl": 86400000
-      }
-    },
-    {
-      "name": "smartpay.background.queue",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {
-        "x-dead-letter-exchange": "smartpay.dlx",
-        "x-dead-letter-routing-key": "dlq",
-        "x-message-ttl": 86400000
-      }
-    },
-    {
-      "name": "smartpay.email.dlq",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {}
-    },
-    {
-      "name": "smartpay.push.dlq",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {}
-    },
-    {
-      "name": "smartpay.documents.dlq",
-      "vhost": "/",
-      "durable": true,
-      "auto_delete": false,
-      "arguments": {}
-    },
-    {
-      "name": "smartpay.background.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
@@ -151,65 +111,25 @@
   ],
   "bindings": [
     {
-      "source": "smartpay.notifications",
+      "source": "smartpay.notification.exchange",
       "vhost": "/",
-      "destination": "smartpay.email.queue",
+      "destination": "smartpay.notification.queue",
       "destination_type": "queue",
-      "routing_key": "notification.email.#",
+      "routing_key": "notification.send",
       "arguments": {}
     },
     {
-      "source": "smartpay.notifications",
+      "source": "smartpay.audit.exchange",
       "vhost": "/",
-      "destination": "smartpay.push.queue",
+      "destination": "smartpay.audit.queue",
       "destination_type": "queue",
-      "routing_key": "notification.push.#",
-      "arguments": {}
-    },
-    {
-      "source": "smartpay.documents",
-      "vhost": "/",
-      "destination": "smartpay.documents.queue",
-      "destination_type": "queue",
-      "routing_key": "document.#",
-      "arguments": {}
-    },
-    {
-      "source": "smartpay.background",
-      "vhost": "/",
-      "destination": "smartpay.background.queue",
-      "destination_type": "queue",
-      "routing_key": "background.#",
+      "routing_key": "audit.*",
       "arguments": {}
     },
     {
       "source": "smartpay.dlx",
       "vhost": "/",
-      "destination": "smartpay.email.dlq",
-      "destination_type": "queue",
-      "routing_key": "",
-      "arguments": {}
-    },
-    {
-      "source": "smartpay.dlx",
-      "vhost": "/",
-      "destination": "smartpay.push.dlq",
-      "destination_type": "queue",
-      "routing_key": "",
-      "arguments": {}
-    },
-    {
-      "source": "smartpay.dlx",
-      "vhost": "/",
-      "destination": "smartpay.documents.dlq",
-      "destination_type": "queue",
-      "routing_key": "",
-      "arguments": {}
-    },
-    {
-      "source": "smartpay.dlx",
-      "vhost": "/",
-      "destination": "smartpay.background.dlq",
+      "destination": "smartpay.notification.dlq",
       "destination_type": "queue",
       "routing_key": "",
       "arguments": {}

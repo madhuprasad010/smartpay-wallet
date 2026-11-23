@@ -13,43 +13,59 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(name = "smartpay.rabbitmq.enabled", havingValue = "true")
 public class RabbitMQConfig {
 
-    public static final String NOTIFICATION_EXCHANGE = "smartpay.notifications";
-    public static final String EMAIL_QUEUE = "smartpay.email.queue";
-    public static final String PUSH_QUEUE = "smartpay.push.queue";
-    public static final String DLX_EXCHANGE = "smartpay.dlx";
-    public static final String EMAIL_DLQ = "smartpay.notifications.dlq";
+    public static final String NOTIFICATION_EXCHANGE = "smartpay.notification.exchange";
+    public static final String NOTIFICATION_QUEUE = "smartpay.notification.queue";
+    public static final String NOTIFICATION_DLQ = "smartpay.notification.dlq";
+    public static final String NOTIFICATION_DLX = "smartpay.notification.dlx";
+
+    public static final String AUDIT_EXCHANGE = "smartpay.audit.exchange";
+    public static final String AUDIT_QUEUE = "smartpay.audit.queue";
 
     @Bean
-    public TopicExchange notificationExchange() {
-        return new TopicExchange(NOTIFICATION_EXCHANGE, true, false);
+    public DirectExchange notificationExchange() {
+        return new DirectExchange(NOTIFICATION_EXCHANGE, true, false);
     }
 
     @Bean
-    public FanoutExchange dlxExchange() {
-        return new FanoutExchange(DLX_EXCHANGE, true, false);
+    public FanoutExchange notificationDlxExchange() {
+        return new FanoutExchange(NOTIFICATION_DLX, true, false);
     }
 
     @Bean
-    public Queue emailQueue() {
-        return QueueBuilder.durable(EMAIL_QUEUE)
-                .withArgument("x-dead-letter-exchange", DLX_EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", "email.dlq")
+    public Queue notificationQueue() {
+        return QueueBuilder.durable(NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", NOTIFICATION_DLX)
                 .build();
     }
 
     @Bean
-    public Queue emailDlq() {
-        return QueueBuilder.durable(EMAIL_DLQ).build();
+    public Queue notificationDlq() {
+        return QueueBuilder.durable(NOTIFICATION_DLQ).build();
     }
 
     @Bean
-    public Binding emailBinding() {
-        return BindingBuilder.bind(emailQueue()).to(notificationExchange()).with("notification.email.*");
+    public Binding notificationBinding() {
+        return BindingBuilder.bind(notificationQueue()).to(notificationExchange()).with("notification.send");
     }
 
     @Bean
     public Binding dlqBinding() {
-        return BindingBuilder.bind(emailDlq()).to(dlxExchange());
+        return BindingBuilder.bind(notificationDlq()).to(notificationDlxExchange());
+    }
+
+    @Bean
+    public TopicExchange auditExchange() {
+        return new TopicExchange(AUDIT_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue auditQueue() {
+        return QueueBuilder.durable(AUDIT_QUEUE).build();
+    }
+
+    @Bean
+    public Binding auditBinding() {
+        return BindingBuilder.bind(auditQueue()).to(auditExchange()).with("audit.*");
     }
 
     @Bean
